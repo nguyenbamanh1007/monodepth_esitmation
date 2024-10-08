@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate distance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Calculate distance</h1>
+
+        <div class="upload-box">
+            <input type="file" id="imageInput" accept="image/*">
+            <label for="imageInput" class="upload-label">Choose an image</label>
+        </div>
+        <div class="content">
+            <div class="upload-section">
+                <h2>Input Image</h2>
+                <div class="output-box">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+            </div>
+            <div class="output-section">
+                <h2>Output</h2>
+                <div class="output-box">
+                    <img id="outputImage" src="" alt="Output Image">
+                </div>
+                <div class="distance_container">
+                    <div class="distance">
+                        <strong>Distance : </strong>
+                        <span id="distance"></span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        <button onclick="runModel()">Run Model</button>
+    </div>
+    
+
+    <script>
+        let canvas = document.getElementById('imageCanvas');
+        let ctx = canvas.getContext('2d');
+        let points = [];
+        let imageInput = document.getElementById('imageInput');
+        let outputImage = document.getElementById('outputImage');
+        
+        imageInput.addEventListener('change', loadImage);
+
+        function loadImage(event) {
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(event.target.files[0]);
+            canvas.addEventListener('click', selectPoint);
+        }
+
+        // function selectPoint(event) {
+        //     if (points.length < 2) {
+        //         let rect = canvas.getBoundingClientRect();
+        //         let x = event.clientX - rect.left;
+        //         let y = event.clientY - rect.top;
+        //         points.push({ x: x, y: y });
+        //         ctx.fillStyle = "red";
+        //         ctx.beginPath();
+        //         ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        //         ctx.fill();
+        //     }
+        //     }
+
+
+        function selectPoint(event) {
+  if (points.length < 2) {
+    let rect = canvas.getBoundingClientRect();
+    let scaleX = canvas.width / rect.width;   // Tính tỉ lệ scale theo chiều ngang
+    let scaleY = canvas.height / rect.height; // Tính tỉ lệ scale theo chiều dọc
+
+    let x = (event.clientX - rect.left) * scaleX;
+    let y = (event.clientY - rect.top) * scaleY;
+
+    points.push({ x: x, y: y });
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+
+
+
+        async function runModel() {
+            if (points.length < 2) {
+                alert("Please select 2 points on the image.");
+                return;
+            }
+            let imageUrl = canvas.toDataURL();
+            let response = await fetch('/run_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageUrl,
+                    points: points
+                }),
+            });
+            let result = await response.json();
+            outputImage.src = result.output_image;
+            distance = result.distance;
+
+            let distanceTag = document.getElementById('distance');
+            distanceTag.innerText = distance + " m"; 
+        }
+    </script>
+</body>
+</html> 
+
+
